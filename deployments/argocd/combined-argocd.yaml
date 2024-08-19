@@ -1,0 +1,252 @@
+# Argo CD Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: argocd
+
+---
+# Argo CD Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-server
+  namespace: argocd
+  labels:
+    app: argocd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: argocd
+      component: server
+  template:
+    metadata:
+      labels:
+        app: argocd
+        component: server
+    spec:
+      containers:
+        - name: argocd-server
+          image: argoproj/argocd:v2.8.0
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 443
+              name: https
+          volumeMounts:
+            - name: argocd-server-storage
+              mountPath: /var/lib/argocd
+      volumes:
+        - name: argocd-server-storage
+          persistentVolumeClaim:
+            claimName: argocd-server-pvc
+
+---
+# Persistent Volume Claim for Argo CD Server
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: argocd-server-pvc
+  namespace: argocd
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: longhorn
+
+---
+# Argo CD Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: argocd-server
+  namespace: argocd
+  labels:
+    app: argocd
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+      name: http
+    - port: 443
+      targetPort: 443
+      protocol: TCP
+      name: https
+  selector:
+    app: argocd
+    component: server
+
+---
+# Argo CD Application Controller
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-application-controller
+  namespace: argocd
+  labels:
+    app: argocd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: argocd
+      component: application-controller
+  template:
+    metadata:
+      labels:
+        app: argocd
+        component: application-controller
+    spec:
+      containers:
+        - name: application-controller
+          image: argoproj/argocd:v2.8.0
+          args:
+            - application-controller
+          volumeMounts:
+            - name: argocd-controller-storage
+              mountPath: /var/lib/argocd
+      volumes:
+        - name: argocd-controller-storage
+          persistentVolumeClaim:
+            claimName: argocd-controller-pvc
+
+---
+# Persistent Volume Claim for Argo CD Application Controller
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: argocd-controller-pvc
+  namespace: argocd
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: longhorn
+
+---
+# Argo CD API Server
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-repo-server
+  namespace: argocd
+  labels:
+    app: argocd
+    component: repo-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: argocd
+      component: repo-server
+  template:
+    metadata:
+      labels:
+        app: argocd
+        component: repo-server
+    spec:
+      containers:
+        - name: repo-server
+          image: argoproj/argocd:v2.8.0
+          args:
+            - repo-server
+          volumeMounts:
+            - name: argocd-repo-storage
+              mountPath: /var/lib/argocd
+      volumes:
+        - name: argocd-repo-storage
+          persistentVolumeClaim:
+            claimName: argocd-repo-pvc
+
+---
+# Persistent Volume Claim for Argo CD Repo Server
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: argocd-repo-pvc
+  namespace: argocd
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: longhorn
+
+---
+# Argo CD Redis
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-redis
+  namespace: argocd
+  labels:
+    app: argocd
+    component: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: argocd
+      component: redis
+  template:
+    metadata:
+      labels:
+        app: argocd
+        component: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:6.0.9-alpine
+          ports:
+            - containerPort: 6379
+              name: redis
+          volumeMounts:
+            - name: argocd-redis-storage
+              mountPath: /data
+      volumes:
+        - name: argocd-redis-storage
+          persistentVolumeClaim:
+            claimName: argocd-redis-pvc
+
+---
+# Persistent Volume Claim for Argo CD Redis
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: argocd-redis-pvc
+  namespace: argocd
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: longhorn
+
+---
+# Argo CD Redis Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: argocd-redis
+  namespace: argocd
+  labels:
+    app: argocd
+    component: redis
+spec:
+  type: ClusterIP
+  ports:
+    - port: 6379
+      targetPort: 6379
+      protocol: TCP
+      name: redis
+  selector:
+    app: argocd
+    component: redis
