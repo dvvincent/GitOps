@@ -1,0 +1,165 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ghost-blog
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mariadb-secret
+  namespace: ghost-blog
+type: Opaque
+data:
+  mariadb-root-password: cGFzc3dvcmQ=  # Replace with base64 encoded password, currently "password"
+  mariadb-user: Z2hvc3Q=               # Replace with base64 encoded user, currently "ghost"
+  mariadb-password: cGFzc3dvcmQ=       # Replace with base64 encoded password, currently "password"
+  mariadb-database: Z2hvc3Q=           # Replace with base64 encoded database name, currently "ghost"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mariadb-pvc
+  namespace: ghost-blog
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: longhorn
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ghost-pvc
+  namespace: ghost-blog
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: longhorn
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mariadb
+  namespace: ghost-blog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mariadb
+  template:
+    metadata:
+      labels:
+        app: mariadb
+    spec:
+      containers:
+        - name: mariadb
+          image: mariadb:10.5
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-secret
+                  key: mariadb-root-password
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-secret
+                  key: mariadb-user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-secret
+                  key: mariadb-password
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-secret
+                  key: mariadb-database
+          ports:
+            - containerPort: 3306
+          volumeMounts:
+            - name: mariadb-data
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: mariadb-data
+          persistentVolumeClaim:
+            claimName: mariadb-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ghost
+  namespace: ghost-blog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ghost
+  template:
+    metadata:
+      labels:
+        app: ghost
+    spec:
+      containers:
+        - name: ghost
+          image: ghost:latest
+          env:
+            - name: database__client
+              value: mysql
+            - name: database__connection__host
+              value: mariadb
+            - name: database__connection__user
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-secret
+                  key: mariadb-user
+            - name: database__connection__password
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-secret
+                  key: mariadb-password
+            - name: database__connection__database
+              valueFrom:
+                secretKeyRef:
+                  name: mariadb-secret
+                  key: mariadb-database
+          ports:
+            - containerPort: 2368
+          volumeMounts:
+            - name: ghost-data
+              mountPath: /var/lib/ghost/content
+      volumes:
+        - name: ghost-data
+          persistentVolumeClaim:
+            claimName: ghost-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mariadb
+  namespace: ghost-blog
+spec:
+  ports:
+    - port: 3306
+      targetPort: 3306
+  selector:
+    app: mariadb
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ghost
+  namespace: ghost-blog
+spec:
+  ports:
+    - port: 80
+      targetPort: 2368
+  selector:
+    app: ghost
+  type: LoadBalancer
+
