@@ -1,0 +1,141 @@
+---
+# Namespace definition
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: guestbook
+---
+# MariaDB Deployment and Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mariadb
+  namespace: guestbook
+  labels:
+    app: mariadb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mariadb
+  template:
+    metadata:
+      labels:
+        app: mariadb
+    spec:
+      containers:
+        - name: mariadb
+          image: mariadb:10.5
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: your-root-password # Replace with your desired root password
+            - name: MYSQL_DATABASE
+              value: guestbook
+          ports:
+            - containerPort: 3306
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mariadb
+  namespace: guestbook
+  labels:
+    app: mariadb
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3306
+      targetPort: 3306
+  selector:
+    app: mariadb
+---
+# Redis Deployment and Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: guestbook
+  labels:
+    app: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:6.2
+          ports:
+            - containerPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: guestbook
+  labels:
+    app: redis
+spec:
+  type: ClusterIP
+  ports:
+    - port: 6379
+      targetPort: 6379
+  selector:
+    app: redis
+---
+# Guestbook Application Deployment and Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guestbook
+  namespace: guestbook
+  labels:
+    app: guestbook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: guestbook
+  template:
+    metadata:
+      labels:
+        app: guestbook
+    spec:
+      containers:
+        - name: guestbook
+          image: dvvincent/your-guestbook-image:latest # Updated to use the latest image
+          env:
+            - name: MARIADB_HOST
+              value: "mariadb.guestbook.svc.cluster.local" # Full DNS for the service in the guestbook namespace
+            - name: MARIADB_PORT
+              value: "3306"
+            - name: MARIADB_USER
+              value: "root" # Default user; change if needed
+            - name: MARIADB_PASSWORD
+              value: "your-root-password" # Match the root password set in MariaDB
+            - name: REDIS_HOST
+              value: "redis.guestbook.svc.cluster.local" # Full DNS for the service in the guestbook namespace
+            - name: REDIS_PORT
+              value: "6379"
+          ports:
+            - containerPort: 8080 # Adjust based on your application's exposed port
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: guestbook
+  namespace: guestbook
+  labels:
+    app: guestbook
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 8080
+  selector:
+    app: guestbook
