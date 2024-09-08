@@ -100,7 +100,8 @@ spec:
           persistentVolumeClaim:
             claimName: redis-pvc
         - name: log-volume
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: nginx-log-pvc
         - name: fluentd-config
           configMap:
             name: fluentd-config
@@ -130,6 +131,19 @@ spec:
   storageClassName: longhorn
   accessModes:
     - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nginx-log-pvc
+spec:
+  storageClassName: longhorn
+  accessModes:
+    - ReadWriteMany
   resources:
     requests:
       storage: 1Gi
@@ -224,4 +238,3 @@ spec:
       targetPort: 80
   selector:
     app: webapp
-
