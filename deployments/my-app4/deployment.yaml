@@ -65,20 +65,6 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 10
 
-        - name: fluentd
-          image: fluent/fluentd:latest
-          env:
-            - name: FLUENTD_ARGS
-              value: "--no-supervisor -q"
-          volumeMounts:
-            - name: log-volume
-              mountPath: /fluentd/log
-            - name: fluentd-config
-              mountPath: /fluentd/etc
-              subPath: fluent.conf
-            - name: fluentd-storage
-              mountPath: /fluentd/data
-
         - name: prometheus-node-exporter
           image: prom/node-exporter:latest
           ports:
@@ -102,31 +88,12 @@ spec:
         - name: log-volume
           persistentVolumeClaim:
             claimName: nginx-log-pvc
-        - name: fluentd-config
-          configMap:
-            name: fluentd-config
-        - name: fluentd-storage
-          persistentVolumeClaim:
-            claimName: fluentd-pvc
 
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: redis-pvc
-spec:
-  storageClassName: longhorn
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
-
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: fluentd-pvc
 spec:
   storageClassName: longhorn
   accessModes:
@@ -165,37 +132,6 @@ data:
         error_log /var/log/nginx/error.log warn;
       }
     }
-
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: fluentd-config
-data:
-  fluent.conf: |
-    <source>
-      @type tail
-      path /fluentd/log/access.log
-      pos_file /fluentd/data/access.log.pos
-      tag nginx.access
-      <parse>
-        @type nginx
-      </parse>
-    </source>
-
-    <source>
-      @type tail
-      path /fluentd/log/error.log
-      pos_file /fluentd/data/error.log.pos
-      tag nginx.error
-      <parse>
-        @type none
-      </parse>
-    </source>
-
-    <match nginx.*>
-      @type stdout
-    </match>
 
 ---
 apiVersion: v1
