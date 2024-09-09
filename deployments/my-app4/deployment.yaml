@@ -120,3 +120,12 @@ spec:
     requests:
       storage: 1Gi
   storageClassName: longhorn
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-secret
+  namespace: webapp
+type: Opaque
+data:
+  url: cGxhY2Vob2xkZXItdXJs # This is a placeholder value encoded in base64; replace it with your actual URL encoded in base64
