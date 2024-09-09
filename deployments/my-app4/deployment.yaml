@@ -29,12 +29,17 @@ spec:
                   name: db-secret
                   key: url
           volumeMounts:
+            # Mounting the NGINX configuration file from the ConfigMap
             - name: config-volume
-              mountPath: /etc/nginx/conf.d
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
+            # Mounting the index.html from the ConfigMap
+            - name: web-content
+              mountPath: /usr/share/nginx/html/index.html
+              subPath: index.html
+            # Mounting the NGINX log volume
             - name: log-volume
               mountPath: /var/log/nginx
-            - name: web-content
-              mountPath: /usr/share/nginx/html
           resources:
             requests:
               memory: "64Mi"
@@ -82,6 +87,7 @@ spec:
               cpu: "200m"
 
       volumes:
+        # ConfigMap containing the NGINX configuration and index.html
         - name: config-volume
           configMap:
             name: nginx-config
