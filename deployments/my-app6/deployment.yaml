@@ -3,7 +3,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: my-config
-  namespace: default
+  namespace: my-app6
   labels:
     app: my-app
   annotations:
@@ -18,7 +18,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: my-app
-  namespace: default
+  namespace: my-app6
   labels:
     app: my-app
   annotations:
@@ -51,7 +51,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: my-service
-  namespace: default
+  namespace: my-app6
   labels:
     app: my-app
   annotations:
