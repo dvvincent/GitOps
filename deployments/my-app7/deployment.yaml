@@ -24,6 +24,10 @@ metadata:
   namespace: pgdatabase
   labels:
     app: postgres
+  annotations:
+    traefik.ingress.kubernetes.io/router.tcp: "true"
+    traefik.ingress.kubernetes.io/router.entrypoints: "websecure"
+    traefik.ingress.kubernetes.io/router.tls.passthrough: "true"
 spec:
   ports:
     - port: 5432
