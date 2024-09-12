@@ -5,6 +5,19 @@ metadata:
   name: pgdatabase
 ---
 apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: pgdatabase
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi  # Adjust the size as needed
+  storageClassName: longhorn
+---
+apiVersion: v1
 kind: Service
 metadata:
   name: postgres
@@ -52,7 +65,37 @@ spec:
               name: postgres-storage
       volumes:
         - name: postgres-storage
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: your-email@example.com  # Replace with your email address
+    privateKeySecretRef:
+      name: letsencrypt-prod-private-key
+    solvers:
+      - http01:
+          ingress:
+            class: traefik
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-happynoises-work-tls
+  namespace: pgdatabase
+spec:
+  secretName: wildcard-happynoises-work-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  commonName: "*.happynoises.work"
+  dnsNames:
+    - "*.happynoises.work"
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
