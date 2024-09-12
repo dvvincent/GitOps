@@ -14,7 +14,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 5Gi  # Adjust the size as needed
+      storage: 5Gi
   storageClassName: longhorn
 ---
 apiVersion: v1
@@ -53,13 +53,13 @@ spec:
           image: postgres:latest
           env:
             - name: POSTGRES_USER
-              value: myuser  # Replace with your desired username
+              value: myuser
             - name: POSTGRES_PASSWORD
-              value: mypassword  # Replace with your desired password
+              value: mypassword
             - name: POSTGRES_DB
-              value: mydatabase  # Replace with your desired database name
+              value: mydatabase
             - name: PGDATA
-              value: /var/lib/postgresql/data/pgdata  # Use a subdirectory for the data
+              value: /var/lib/postgresql/data/pgdata
           ports:
             - containerPort: 5432
           volumeMounts:
@@ -77,13 +77,15 @@ metadata:
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory
-    email: dvincent.ssm@gmail.com  # Updated email address
+    email: dvincent.ssm@gmail.com
     privateKeySecretRef:
       name: letsencrypt-prod-private-key
     solvers:
-      - http01:
-          ingress:
-            class: traefik
+      - dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              name: cloudflare-api-token-secret
+              key: api-token
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -107,8 +109,6 @@ metadata:
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
     traefik.ingress.kubernetes.io/router.tls: "true"
-    traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
-    traefik.ingress.kubernetes.io/router.middlewares: pgdatabase-https-redirect@kubernetescrd
 spec:
   rules:
     - host: database.happynoises.work
